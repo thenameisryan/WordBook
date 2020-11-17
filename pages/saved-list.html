@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="./saved-list.css">
+</head>
+<body>
+
+<div class="page-header">
+  <div class="container">
+    <h1>Recently Saved Words</h1>
+    <div id="wordsContainer"></div>
+  </div>
+</div>
+
+<div class="page-footer">
+  <div class="container">
+    <p>
+      Copyright © 2020 WordBook. All rights reserved.
+    </p>
+  </div>
+</div>
+
+<div id="confirmRemoveModal" class="modal hide">
+  <div class="dialog">
+    <div class="dialog-heading">
+      <h3>Remove word?</h3>
+    </div>
+    <div class="dialog-body">
+      Are you sure you want to remove this word from your saved words?
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-remove" id="confirmButton">Yes, remove</button>
+      <button class="btn" id="cancelButton">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="./saved-list.js"></script>
+</body>
+</html>
