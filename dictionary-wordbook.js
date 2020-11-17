@@ -266,6 +266,20 @@ function getStyles(placement, popUpHeight, popUpWidth) {
       background-size: contain;
       vertical-align: top;
     }    
+
+    .btn-save::before {
+      background-image: url("data:image/svg+xml,%3Csvg width='1em' height='1em' viewBox='0 0 16 16' class='bi bi-journal-plus' fill='${theme === 'dark' ? '%23ffffff' : '%23000000'}' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z'/%3E%3Cpath d='M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1H1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1H1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1H1z'/%3E%3Cpath fill-rule='evenodd' d='M8 5.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V10a.5.5 0 0 1-1 0V8.5H6a.5.5 0 0 1 0-1h1.5V6a.5.5 0 0 1 .5-.5z'/%3E%3C/svg%3E");
+    }
+
+    .btn.label-save,
+    .btn.label-save:hover {
+      display: inline-block;
+      background-color: ${theme === 'dark' ? '#2f5b34' : '#deffb6'};
+      cursor: default;
+    }
+    .label-save::before {
+      background-image: url("data:image/svg+xml,%3Csvg width='1em' height='1em' viewBox='0 0 16 16' class='bi bi-journal-check' fill='${theme === 'dark' ? '%23ffffff' : '%23000000'}' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2z'/%3E%3Cpath d='M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1H1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1H1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1H1z'/%3E%3Cpath fill-rule='evenodd' d='M10.854 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 8.793l2.646-2.647a.5.5 0 0 1 .708 0z'/%3E%3C/svg%3E");
+    }
   `;
 
   return style;
@@ -359,11 +373,45 @@ function createPopUp() {
   let footer = document.createElement('div');
   footer.setAttribute('class', 'footer');
 
+  let btnSave = document.createElement('button');
+  btnSave.setAttribute('class', 'btn btn-save');
+  btnSave.textContent = browser.i18n.getMessage("saveBtnLabel");
+  btnSave.setAttribute('title', browser.i18n.getMessage("saveBtnTitle"));
+  btnSave.onclick = function(e) {
+    saveWord(key);
+  }
+
+  let labelSave = document.createElement('span');
+  labelSave.setAttribute('class', 'btn label-save hide');
+  labelSave.textContent = browser.i18n.getMessage("savedBtnLabel");
+  labelSave.setAttribute('title', browser.i18n.getMessage("savedBtnTitle"));
+
+  shadow.appendChild(style);
+  shadow.appendChild(container);
+
+  container.appendChild(beak);
+  container.appendChild(popup);
+  
+  popup.appendChild(header);
+  header.appendChild(btnClose);
+  header.appendChild(btnListen);
+  header.appendChild(term);
+
+  popup.appendChild(content);
+  content.appendChild(phonetic);
+  content.appendChild(type);
+  content.appendChild(definition);
+
+  popup.appendChild(footer);
+  footer.appendChild(btnSave);
+  footer.appendChild(labelSave);
+  footer.appendChild(linkMore);
 
   document.body.appendChild(wrapper);
 
   OPENED_POPUPS[key] = {node: wrapper, selectionData: {...selectionData}};
 
+  updateSaveBtn(key, selectionData.term);
 
   let sending = browser.runtime.sendMessage({
       type: 'fetch-meaning',
@@ -393,6 +441,117 @@ function getPopUpElements(key) {
   }
 }
 
+
+function updateSaveBtn(key, term) {
+  /* Checks if the current term is saved or not. 
+  If it is saved, hides the Save button and shows Saved label.
+  */
+
+  browser.storage.local.get('saved')
+  .then((item) => {
+    const saved = item.saved || {};
+
+    if (saved[term]) {
+      const popup = getPopUpElements(key);
+      popup.btnSave.classList.add('hide');
+      popup.labelSave.classList.remove('hide');
+    }
+  });
+
+};
+
+
+function saveWord(key) {
+  const popup = getPopUpElements(key);
+
+  const term = popup.term.textContent;
+  let definition = popup.definition.textContent;
+  if (definition === LOADING_MESSAGE || definition === NO_DEFINITION_MESSAGE)
+    definition = '';
+  const phonetic = popup.phonetic.textContent;
+  const type = popup.type.textContent;
+  let audio;
+  if (popup.audio)
+    audio = popup.audio.getAttribute('src');
+
+  /* Save object structure
+    {
+      saved: {
+        word: {
+          definition:
+          phonetic:
+          audio:
+          type:
+        }, 
+        word: {...}, ...
+      } 
+    } 
+  */
+
+  browser.storage.local.get('saved')
+  .then((item) => {
+    let saved = item.saved || {};
+
+    let newSaved = {
+      saved: {
+        ...saved, 
+        [term]: {
+          definition: definition,
+          phonetic: phonetic,
+          type: type,
+          audio: audio,
+        }
+      }
+    };
+
+    browser.storage.local.set(newSaved).then(() => {
+      popup.btnSave.classList.add('hide');
+      popup.labelSave.classList.remove('hide');
+    });
+  });
+}
+
+
+function updatePopUp(key, data) {
+  const popupNode = OPENED_POPUPS[key].node;
+
+  const popup = popupNode.shadowRoot;
+
+  if (!data) {
+    popup.querySelector('.definition').textContent = NO_DEFINITION_MESSAGE;
+    return;
+  }
+
+  if (data.term)
+    popup.querySelector('.term').textContent = data.term;
+  
+  popup.querySelector('.phonetic').textContent = data.phonetic;
+  popup.querySelector('.type').textContent = data.type;
+  popup.querySelector('.definition').textContent = data.definition;
+
+  if (data.audio) {
+    let audio = document.createElement('audio');
+    audio.setAttribute('src', data.audio);
+    audio.setAttribute('preload', 'auto');
+    popup.appendChild(audio);
+
+    let audioBtn = popup.querySelector('.btn-listen');
+    audioBtn.classList.remove('hide');
+    audioBtn.onclick = function(e) {
+      audio.play();
+    };
+  }
+
+  updateSaveBtn(key, data.term);
+
+  // Update position if popup is on top
+  const container = popup.querySelector('.container');
+  if (container.classList.contains('popup-top')) {
+    const popUpHeight = 150;
+    const popupInner = popup.querySelector('.popup');
+    container.style.top = parseInt(container.style.top) - (popupInner.getBoundingClientRect().height - popUpHeight) + 'px';
+  }
+}
 
 
 function destroyPopUp(key) {
